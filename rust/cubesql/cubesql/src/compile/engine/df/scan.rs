@@ -459,8 +459,9 @@ mod tests {
             array::{BooleanArray, Float64Array, StringArray},
             datatypes::{Field, Schema},
         },
-        physical_plan::common,
+        physical_plan::common, execution::{context::TaskContext, runtime_env::{RuntimeEnv, RuntimeConfig}},
     };
+    use egg::HashMap;
 
     use super::*;
     use crate::{compile::MetaContext, CubeError};
@@ -549,7 +550,18 @@ mod tests {
             transport: get_test_transport(),
         };
 
-        let stream = scan_node.execute(0).await.unwrap();
+        let runtime = Arc::new(RuntimeEnv::new(
+            RuntimeConfig::new(),
+        ).expect("Unable to create RuntimeEnv for testing"));
+        let task = Arc::new(TaskContext::new(
+            "test".to_string(),
+            "session".to_string(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            runtime,
+        ));
+        let stream = scan_node.execute(0, task).await.unwrap();
         let batches = common::collect(stream).await.unwrap();
 
         assert_eq!(
